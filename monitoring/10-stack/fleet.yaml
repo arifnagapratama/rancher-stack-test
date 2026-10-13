@@ -4,6 +4,8 @@ dependsOn:
 helm:
   releaseName: rancher-monitoring
   # chart: oci://registry.local:5000/charts/rancher-monitoring
+  repo: https://charts.rancher.io
+  chart: rancher-monitoring
   version: "106.1.8+up69.8.2-rancher.36"
   timeoutSeconds: 1800
   valuesFiles:
