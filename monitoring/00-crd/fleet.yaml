@@ -1,0 +1,6 @@
+defaultNamespace: cattle-monitoring-system
+helm:
+  releaseName: rancher-monitoring-crd
+  # chart: oci://registry.local:5000/charts/rancher-monitoring-crd
+  version: "106.1.8+up69.8.2-rancher.36"
+  waitForJobs: true

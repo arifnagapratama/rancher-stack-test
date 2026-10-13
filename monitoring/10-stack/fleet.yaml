@@ -1,0 +1,24 @@
+defaultNamespace: cattle-monitoring-system
+dependsOn:
+  - name: monitoring-00-crd
+helm:
+  releaseName: rancher-monitoring
+  # chart: oci://registry.local:5000/charts/rancher-monitoring
+  version: "106.1.8+up69.8.2-rancher.36"
+  timeoutSeconds: 1800
+  valuesFiles:
+    - values.yaml
+diff:
+  comparePatches:
+    - apiVersion: admissionregistration.k8s.io/v1
+      kind: ValidatingWebhookConfiguration
+      name: rancher-monitoring-admission
+      operations:
+        - op: remove
+          path: /webhooks
+    - apiVersion: admissionregistration.k8s.io/v1
+      kind: MutatingWebhookConfiguration
+      name: rancher-monitoring-admission
+      operations:
+        - op: remove
+          path: /webhooks
