@@ -41,9 +41,6 @@ alertmanager:
             requests:
               storage: 5Gi
 grafana:
-  service:
-    type: NodePort
-    nodePort: 32000
   # To expose Grafana through an NGINX Ingress, configure a DNS record and TLS
   # secret, then uncomment and adjust this block. The Ingress can use Grafana's
   # internal ClusterIP service; NodePort can remain enabled if both access paths
