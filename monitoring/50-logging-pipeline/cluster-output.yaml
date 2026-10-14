@@ -1,0 +1,16 @@
+apiVersion: logging.banzaicloud.io/v1beta1
+kind: ClusterOutput
+metadata:
+  name: loki
+  namespace: cattle-logging-system
+spec:
+  loki:
+    url: http://loki-gateway.cattle-logging-system.svc.cluster.local:80
+    configure_kubernetes_labels: true
+    buffer:
+      type: file
+      path: /buffers/loki
+      chunk_limit_size: 8MB
+      total_limit_size: 2GB
+      flush_interval: 5s
+      retry_forever: true

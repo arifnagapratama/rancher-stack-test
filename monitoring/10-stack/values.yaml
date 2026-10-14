@@ -62,3 +62,11 @@ grafana:
     enabled: true
     size: 5Gi
   adminPassword: ""
+  additionalDataSources:
+    - name: Loki
+      uid: loki
+      type: loki
+      access: proxy
+      url: http://loki-gateway.cattle-logging-system.svc.cluster.local:80
+      isDefault: false
+      editable: false

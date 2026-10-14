@@ -1,0 +1,4 @@
+defaultNamespace: cattle-logging-system
+dependsOn:
+  - name: monitoring-monitoring-30-logging
+  - name: monitoring-monitoring-40-loki

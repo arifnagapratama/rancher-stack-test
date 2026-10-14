@@ -18,6 +18,8 @@ Menambahkan Loki bersama stack Rancher Monitoring dan Rancher Logging yang sudah
 
 Tambahkan bundle Fleet untuk Loki di `monitoring/40-loki`. Gunakan chart Loki Grafana Community versi `18.7.6` (versi aplikasi Loki `3.7.6`) dalam mode monolitik/single-binary. Jalankan di namespace `cattle-logging-system` agar dekat dengan Rancher Logging. Repo chart ini merupakan jalur OSS yang dipelihara setelah migrasi chart Loki.
 
+Pertahankan Loki Canary bawaan chart untuk memeriksa ingest Loki dan memenuhi validasi Helm test pada chart.
+
 Gunakan penyimpanan filesystem pada PVC `ReadWriteOnce` berukuran 20Gi dan simpan log selama 15 hari. Ini mengikuti periode retensi monitoring dan pola storage yang sudah ada. Loki hanya dapat diakses dari dalam cluster; ingress eksternal dan lapisan autentikasi tidak termasuk perubahan ini.
 
 Konfigurasi bundle dan nilai chart Loki disimpan di repo sebagai `monitoring/40-loki/fleet.yaml` dan `monitoring/40-loki/values.yaml`. Resource Kubernetes seperti Deployment, Service, dan PVC dirender oleh chart Loki yang versinya dipatok di Fleet; konfigurasi values yang menghasilkan resource tersebut tetap dikelola dari repo.
