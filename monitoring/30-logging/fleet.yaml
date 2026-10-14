@@ -1,0 +1,8 @@
+defaultNamespace: cattle-logging-system
+dependsOn:
+  - name: monitoring-monitoring-20-logging-crd
+helm:
+  releaseName: rancher-logging
+  repo: https://charts.rancher.io
+  chart: rancher-logging
+  version: "106.0.8+up4.10.0-rancher.24"
