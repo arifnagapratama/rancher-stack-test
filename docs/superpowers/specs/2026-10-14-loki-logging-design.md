@@ -1,61 +1,61 @@
-# Loki integration design
+# Desain integrasi Loki
 
-## Goal
+## Tujuan
 
-Deploy Loki alongside the existing Rancher Monitoring and Rancher Logging stacks, route cluster logs to Loki, and provision Loki as a Grafana datasource so logs are available in Grafana Explore.
+Menambahkan Loki bersama stack Rancher Monitoring dan Rancher Logging yang sudah ada, mengarahkan log cluster ke Loki, dan mendaftarkan Loki sebagai datasource Grafana agar log dapat dicari melalui Grafana Explore.
 
-## Current context
+## Konteks saat ini
 
-- Rancher Monitoring is deployed from `monitoring/10-stack`, in `cattle-monitoring-system`.
-- Grafana is part of Rancher Monitoring and persists data on a 5Gi PVC.
-- Rancher Logging and its CRD chart are deployed in `cattle-logging-system` at chart version `106.0.8+up4.10.0-rancher.24`.
-- Rancher Logging uses the Logging Operator 4.10 line, which supports Loki outputs and cluster-wide flows.
-- The installed Grafana version is expected to be 11.5.5. Grafana's Loki datasource is built in, so no plugin installation is needed.
+- Rancher Monitoring dipasang dari `monitoring/10-stack`, di namespace `cattle-monitoring-system`.
+- Grafana merupakan bagian dari Rancher Monitoring dan menyimpan datanya pada PVC 5Gi.
+- Rancher Logging beserta chart CRD-nya dipasang di `cattle-logging-system` dengan versi chart `106.0.8+up4.10.0-rancher.24`.
+- Rancher Logging menggunakan Logging Operator jalur versi 4.10, yang mendukung output Loki dan alur log cluster.
+- Versi Grafana yang digunakan diperkirakan 11.5.5. Dukungan datasource Loki sudah tersedia di Grafana, jadi plugin tambahan tidak diperlukan.
 
-## Design
+## Desain
 
-### Loki deployment
+### Pemasangan Loki
 
-Add a Fleet bundle for Loki under `monitoring/40-loki`. Use the Grafana Community Loki chart, pinned to chart version `18.7.6` (Loki application version `3.7.6`), in monolithic/single-binary mode. Run it in `cattle-logging-system` to keep the log backend near Rancher Logging. This chart repository is the maintained OSS path after the Loki chart migration.
+Tambahkan bundle Fleet untuk Loki di `monitoring/40-loki`. Gunakan chart Loki Grafana Community versi `18.7.6` (versi aplikasi Loki `3.7.6`) dalam mode monolitik/single-binary. Jalankan di namespace `cattle-logging-system` agar dekat dengan Rancher Logging. Repo chart ini merupakan jalur OSS yang dipelihara setelah migrasi chart Loki.
 
-Use filesystem storage on a 20Gi `ReadWriteOnce` PVC and retain logs for 15 days. This follows the existing monitoring retention window and storage class behavior. Loki will remain internal to the cluster; no external ingress or authentication layer is part of this change.
+Gunakan penyimpanan filesystem pada PVC `ReadWriteOnce` berukuran 20Gi dan simpan log selama 15 hari. Ini mengikuti periode retensi monitoring dan pola storage yang sudah ada. Loki hanya dapat diakses dari dalam cluster; ingress eksternal dan lapisan autentikasi tidak termasuk perubahan ini.
 
-### Log delivery
+### Pengiriman log
 
-Add a Fleet bundle under `monitoring/50-logging-pipeline` containing:
+Tambahkan bundle Fleet di `monitoring/50-logging-pipeline` yang berisi:
 
-- A `ClusterOutput` in `cattle-logging-system` that sends records to Loki's in-cluster service.
-- A `ClusterFlow` matching all namespaces and forwarding matching records to that output.
+- `ClusterOutput` di `cattle-logging-system` untuk mengirim log ke service Loki di dalam cluster.
+- `ClusterFlow` yang memilih log dari semua namespace dan meneruskannya ke output tersebut.
 
-The bundle must depend on both the Rancher Logging bundle and the Loki bundle, so the Logging CRDs and Loki service exist before the pipeline is applied. Retain Kubernetes metadata and provide a bounded Fluentd buffer with retries so temporary Loki unavailability does not immediately discard queued records.
+Bundle harus bergantung pada bundle Rancher Logging dan Loki agar CRD Logging serta service Loki tersedia sebelum pipeline diterapkan. Pertahankan metadata Kubernetes dan gunakan buffer Fluentd dengan batas serta retry, supaya gangguan sementara pada Loki tidak langsung membuang log yang antre.
 
-### Grafana datasource
+### Datasource Grafana
 
-Add a provisioned datasource named `Loki` to `monitoring/10-stack/values.yaml`, targeting Loki's in-cluster query service. Keep it non-default so the existing Prometheus datasource remains Grafana's default. This makes Loki available from Explore and dashboards without manual Grafana setup.
+Tambahkan datasource terprovisi bernama `Loki` ke `monitoring/10-stack/values.yaml`, dengan alamat service query Loki di dalam cluster. Jangan jadikan datasource ini default agar datasource Prometheus yang ada tetap menjadi default Grafana. Setelah dipasang, Loki dapat langsung dipilih di Explore dan dashboard tanpa konfigurasi manual di Grafana.
 
-## Alternatives considered
+## Alternatif yang dipertimbangkan
 
-1. **Monolithic Loki with a PVC (selected):** simplest fit for the repository's existing single-cluster Helm deployments and explicitly approved local-storage/15-day assumption.
-2. **Loki with S3/MinIO object storage:** better suited to larger or more durable installations, but this repository has no object-storage endpoint or credentials to configure.
-3. **Grafana Alloy instead of Rancher Logging for shipping:** Grafana recommends Alloy for new Grafana-native collection pipelines, but this cluster already has Rancher Logging installed and its operator supports the required Loki output. Adding a second collector would duplicate log collection.
+1. **Loki monolitik dengan PVC (dipilih):** paling sederhana dan sesuai dengan deployment Helm satu cluster di repo ini serta asumsi penyimpanan lokal dan retensi 15 hari yang telah disetujui.
+2. **Loki dengan object storage S3/MinIO:** lebih sesuai untuk instalasi lebih besar atau kebutuhan ketahanan data lebih tinggi, tetapi repo ini belum memiliki endpoint maupun kredensial object storage.
+3. **Grafana Alloy sebagai pengirim log pengganti Rancher Logging:** Grafana merekomendasikan Alloy untuk pipeline koleksi baru yang berpusat pada Grafana. Namun, cluster ini sudah menggunakan Rancher Logging dan operatornya mendukung output Loki. Menambah collector kedua akan menggandakan koleksi log.
 
-## Failure behavior and boundaries
+## Perilaku saat terjadi gangguan dan batasan
 
-- Loki runs as a single binary with one PVC; this is not a highly available logging backend.
-- If Loki is unavailable, Fluentd retries using its configured buffer; buffer exhaustion can still cause loss, so capacity and retry settings must be bounded.
-- PVC capacity is fixed at 20Gi in this initial configuration. Growth beyond that requires increasing the PVC and may require a storage migration depending on the cluster's storage class.
-- This change routes cluster container logs collected by Rancher Logging. It does not add custom parsing, retention dashboards, alert rules, or external access.
+- Loki berjalan sebagai satu binary dengan satu PVC; konfigurasi ini bukan backend logging high availability.
+- Jika Loki tidak tersedia, Fluentd akan mencoba lagi menggunakan buffer yang dikonfigurasi. Buffer yang penuh tetap dapat menyebabkan log hilang, sehingga ukuran buffer dan pengaturan retry perlu dibatasi.
+- Kapasitas PVC awal ditetapkan 20Gi. Jika kebutuhan melebihi kapasitas tersebut, PVC perlu diperbesar dan migrasi storage mungkin diperlukan, bergantung pada storage class cluster.
+- Perubahan ini mengirim log container cluster yang dikoleksi Rancher Logging. Parsing khusus, dashboard retensi, aturan alert, dan akses eksternal tidak termasuk.
 
-## Validation criteria
+## Kriteria validasi
 
-- Fleet renders and accepts the Loki, logging pipeline, and datasource configuration.
-- Loki becomes ready with its PVC bound.
-- Rancher Logging reports the `ClusterOutput` and `ClusterFlow` active and forwards records to Loki.
-- Grafana shows the Loki datasource as healthy, and Grafana Explore can query recent Kubernetes log records.
+- Fleet dapat merender dan menerima konfigurasi Loki, pipeline logging, dan datasource.
+- Loki siap digunakan dan PVC-nya terikat.
+- Rancher Logging melaporkan `ClusterOutput` dan `ClusterFlow` aktif serta meneruskan record ke Loki.
+- Grafana melaporkan datasource Loki sehat dan Grafana Explore dapat mencari log Kubernetes terbaru.
 
-## References
+## Referensi
 
-- [Grafana Loki Helm chart migration](https://grafana.com/docs/loki/latest/setup/upgrade/)
-- [Install the monolithic Loki Helm chart](https://grafana.com/docs/loki/latest/setup/install/helm/install-monolithic/)
-- [Grafana Loki datasource](https://grafana.com/docs/grafana/latest/datasources/loki/)
-- [Logging Operator 4.10 output types](https://kube-logging.dev/4.10/docs/configuration/crds/v1beta1/output_types/)
+- [Migrasi chart Helm Loki](https://grafana.com/docs/loki/latest/setup/upgrade/)
+- [Memasang chart Helm Loki monolitik](https://grafana.com/docs/loki/latest/setup/install/helm/install-monolithic/)
+- [Datasource Loki Grafana](https://grafana.com/docs/grafana/latest/datasources/loki/)
+- [Tipe output Logging Operator 4.10](https://kube-logging.dev/4.10/docs/configuration/crds/v1beta1/output_types/)
