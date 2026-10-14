@@ -20,6 +20,8 @@ Tambahkan bundle Fleet untuk Loki di `monitoring/40-loki`. Gunakan chart Loki Gr
 
 Gunakan penyimpanan filesystem pada PVC `ReadWriteOnce` berukuran 20Gi dan simpan log selama 15 hari. Ini mengikuti periode retensi monitoring dan pola storage yang sudah ada. Loki hanya dapat diakses dari dalam cluster; ingress eksternal dan lapisan autentikasi tidak termasuk perubahan ini.
 
+Konfigurasi bundle dan nilai chart Loki disimpan di repo sebagai `monitoring/40-loki/fleet.yaml` dan `monitoring/40-loki/values.yaml`. Resource Kubernetes seperti Deployment, Service, dan PVC dirender oleh chart Loki yang versinya dipatok di Fleet; konfigurasi values yang menghasilkan resource tersebut tetap dikelola dari repo.
+
 ### Pengiriman log
 
 Tambahkan bundle Fleet di `monitoring/50-logging-pipeline` yang berisi:
@@ -29,15 +31,13 @@ Tambahkan bundle Fleet di `monitoring/50-logging-pipeline` yang berisi:
 
 Bundle harus bergantung pada bundle Rancher Logging dan Loki agar CRD Logging serta service Loki tersedia sebelum pipeline diterapkan. Pertahankan metadata Kubernetes dan gunakan buffer Fluentd dengan batas serta retry, supaya gangguan sementara pada Loki tidak langsung membuang log yang antre.
 
+Simpan deklarasi `ClusterOutput` dan `ClusterFlow` sebagai manifest YAML di bundle tersebut. Dengan demikian, alur pengiriman log dikelola melalui Git dan Fleet, bukan dibuat manual lewat Rancher UI.
+
 ### Datasource Grafana
 
 Tambahkan datasource terprovisi bernama `Loki` ke `monitoring/10-stack/values.yaml`, dengan alamat service query Loki di dalam cluster. Jangan jadikan datasource ini default agar datasource Prometheus yang ada tetap menjadi default Grafana. Setelah dipasang, Loki dapat langsung dipilih di Explore dan dashboard tanpa konfigurasi manual di Grafana.
 
-## Alternatif yang dipertimbangkan
-
-1. **Loki monolitik dengan PVC (dipilih):** paling sederhana dan sesuai dengan deployment Helm satu cluster di repo ini serta asumsi penyimpanan lokal dan retensi 15 hari yang telah disetujui.
-2. **Loki dengan object storage S3/MinIO:** lebih sesuai untuk instalasi lebih besar atau kebutuhan ketahanan data lebih tinggi, tetapi repo ini belum memiliki endpoint maupun kredensial object storage.
-3. **Grafana Alloy sebagai pengirim log pengganti Rancher Logging:** Grafana merekomendasikan Alloy untuk pipeline koleksi baru yang berpusat pada Grafana. Namun, cluster ini sudah menggunakan Rancher Logging dan operatornya mendukung output Loki. Menambah collector kedua akan menggandakan koleksi log.
+Semua konfigurasi yang ditambahkan disimpan di repo sebagai YAML dan diterapkan oleh Fleet. Tidak ada resource tambahan yang perlu dibuat manual melalui Rancher UI.
 
 ## Perilaku saat terjadi gangguan dan batasan
 
