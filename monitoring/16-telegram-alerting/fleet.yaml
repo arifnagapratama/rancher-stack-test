@@ -1,0 +1,4 @@
+defaultNamespace: cattle-monitoring-system
+dependsOn:
+  - name: monitoring-monitoring-10-stack
+  - name: monitoring-monitoring-15-alerting-drivers

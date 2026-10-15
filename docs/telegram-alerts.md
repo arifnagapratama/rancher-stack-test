@@ -59,18 +59,43 @@ barulah ubah values lalu biarkan Fleet menerapkan upgrade.
 
 ## Menghubungkan Alertmanager
 
-Di Rancher, buka **Monitoring → Alerting → AlertmanagerConfigs**, buat atau
-pilih AlertmanagerConfig, lalu tambahkan receiver Webhook dengan tipe **SMS**.
-Target-nya:
+Bundle Fleet `monitoring-monitoring-16-telegram-alerting` membuat resource
+`AlertmanagerConfig` bernama `telegram-alerts` di namespace
+`cattle-monitoring-system`. Receiver Webhook-nya bernama `telegram` dan
+mengarah ke service Sachet. Bundle ini menunggu stack monitoring dan Alerting
+Drivers siap.
 
-```text
-http://rancher-alerting-drivers-sachet.cattle-monitoring-system.svc:9876/alert
+Route di AlertmanagerConfig ini sengaja hanya mencocokkan label
+`test=telegram`. Dengan demikian, ia tidak mengirim seluruh alert cluster ke
+Telegram. Nama receiver yang harus dimasukkan ke ConfigMap Sachet adalah:
+
+```yaml
+name: "cattle-monitoring-system/telegram-alerts/telegram"
 ```
 
-Buat route pada AlertmanagerConfig yang mengarah ke receiver tersebut dan atur
-matcher sesuai alert yang ingin dikirim. Nama konfigurasi Sachet harus mengikuti
-format `<namespace>/<alertmanagerconfig-name>/<receiver-name>` seperti contoh
-di atas. Dokumentasi Rancher menjelaskan bahwa Telegram memakai driver SMS dan
-receiver Webhook bertipe SMS.
+Formatnya `<namespace>/<alertmanagerconfig-name>/<receiver-name>`. Resource
+AlertmanagerConfig dipilih oleh Rancher Monitoring 106 karena selector chart
+menerima konfigurasi di namespace cluster monitoring.
+
+## Mengirim alert uji
+
+Setelah mengisi ConfigMap Sachet dan bundle AlertmanagerConfig berstatus Ready,
+pastikan konteks `kubectl` masih menunjuk ke cluster `altera-rke`, lalu terapkan
+contoh rule uji:
+
+```sh
+kubectl apply -f examples/telegram-test-alert.yaml
+```
+
+Rule ini memakai `vector(1)`, sehingga langsung firing dan berulang selama
+resource ada. Route `test=telegram` akan mengirimkannya ke Telegram. Hapus rule
+setelah pesan uji diterima agar alert berhenti:
+
+```sh
+kubectl delete -f examples/telegram-test-alert.yaml
+```
+
+Rule contoh sengaja disimpan di `examples/`, di luar bundle Fleet, sehingga
+tidak dipasang otomatis.
 
 Referensi: [Rancher Receiver Configuration](https://ranchermanager.docs.rancher.com/v2.12/reference-guides/monitoring-v2-configuration/receivers).

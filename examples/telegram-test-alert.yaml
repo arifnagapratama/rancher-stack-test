@@ -1,0 +1,21 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: telegram-test-alert
+  namespace: cattle-monitoring-system
+  labels:
+    release: rancher-monitoring
+spec:
+  groups:
+    - name: telegram-test
+      interval: 30s
+      rules:
+        - alert: TelegramTest
+          expr: vector(1)
+          for: 0m
+          labels:
+            severity: warning
+            test: telegram
+          annotations:
+            summary: Telegram test alert
+            description: This alert fires continuously while the test rule exists.

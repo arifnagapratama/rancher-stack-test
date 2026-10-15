@@ -1,0 +1,24 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: telegram-alerts
+  namespace: cattle-monitoring-system
+  labels:
+    release: rancher-monitoring
+spec:
+  route:
+    receiver: telegram
+    groupBy:
+      - alertname
+    groupWait: 10s
+    groupInterval: 1m
+    repeatInterval: 4h
+    matchers:
+      - name: test
+        value: telegram
+        matchType: "="
+  receivers:
+    - name: telegram
+      webhookConfigs:
+        - url: http://rancher-alerting-drivers-sachet.cattle-monitoring-system.svc:9876/alert
+          sendResolved: true
