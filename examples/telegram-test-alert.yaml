@@ -16,6 +16,7 @@ spec:
           labels:
             severity: warning
             test: telegram
+            namespace: cattle-monitoring-system
           annotations:
             summary: Telegram test alert
             description: This alert fires continuously while the test rule exists.

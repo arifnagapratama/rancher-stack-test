@@ -37,8 +37,12 @@ receivers:
     provider: "telegram"
     to:
       - "<TELEGRAM_CHAT_ID>"
-    text: '{{ .GroupLabels.alertname }} @ {{ .Labels.instance }}: {{ .Status | toUpper }}'
+    text: '{{ .CommonLabels.alertname }}: {{ .Status | toUpper }} — {{ .CommonAnnotations.summary }}'
 ```
+
+Template Sachet menerima satu objek notifikasi Alertmanager. Gunakan
+`.CommonLabels` atau `.CommonAnnotations` untuk nilai bersama; `.Labels.instance`
+hanya tersedia di dalam iterasi per-alert seperti `{{ range .Alerts.Firing }}`.
 
 > **Penyimpanan token:** chart upstream membaca konfigurasi ini dari ConfigMap,
 > bukan Kubernetes Secret. Token tidak dimasukkan ke Git, tetapi akan tersimpan
@@ -67,7 +71,12 @@ Drivers siap.
 
 Route di AlertmanagerConfig ini sengaja hanya mencocokkan label
 `test=telegram`. Dengan demikian, ia tidak mengirim seluruh alert cluster ke
-Telegram. Nama receiver yang harus dimasukkan ke ConfigMap Sachet adalah:
+Telegram. Prometheus Operator juga menambahkan matcher namespace
+`namespace="cattle-monitoring-system"` pada route tersebut. Karena itu rule uji
+harus menyertakan label `namespace: cattle-monitoring-system`; tanpa label ini,
+Prometheus tetap menandai alert sebagai firing, tetapi Alertmanager mengarahkannya
+ke receiver default `null`. Nama receiver yang harus dimasukkan ke ConfigMap
+Sachet adalah:
 
 ```yaml
 name: "cattle-monitoring-system/telegram-alerts/telegram"
