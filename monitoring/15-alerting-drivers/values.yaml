@@ -1,0 +1,8 @@
+sachet:
+  enabled: true
+  sachet:
+    providers: {}
+    receivers: []
+
+prom2teams:
+  enabled: false

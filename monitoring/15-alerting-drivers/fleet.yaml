@@ -1,0 +1,10 @@
+defaultNamespace: cattle-monitoring-system
+dependsOn:
+  - name: monitoring-monitoring-10-stack
+helm:
+  releaseName: rancher-alerting-drivers
+  repo: https://charts.rancher.io
+  chart: rancher-alerting-drivers
+  version: "106.0.0"
+  valuesFiles:
+    - values.yaml
