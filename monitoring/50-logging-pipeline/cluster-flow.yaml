@@ -4,6 +4,22 @@ metadata:
   name: all-to-loki
   namespace: cattle-logging-system
 spec:
+  filters:
+    - parser:
+        key_name: message
+        reserve_data: true
+        remove_key_name_field: false
+        emit_invalid_record_to_error: false
+        parse:
+          type: multi_format
+          patterns:
+            - format: regexp
+              expression: '/^(?<klog_severity>[IWEF])[0-9]{4}[[:space:]]+[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]+[[:space:]]+[0-9]+[[:space:]]+[^[:space:]]+\][[:space:]]+(?<message>.*)$/'
+            - format: none
+    - record_transformer:
+        enable_ruby: true
+        records:
+          - level: '${record["klog_severity"] == "E" ? "error" : record["klog_severity"] == "I" ? "info" : record["klog_severity"] == "W" ? "warning" : record["klog_severity"] == "F" ? "critical" : nil}'
   match:
     - select: {}
   globalOutputRefs:
