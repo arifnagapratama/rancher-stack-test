@@ -10,6 +10,12 @@ spec:
     # do not promote every arbitrary Pod label into Loki stream labels.
     configure_kubernetes_labels: false
     extract_kubernetes_labels: false
+    labels:
+      namespace: $.kubernetes.namespace_name
+      pod: $.kubernetes.pod_name
+      container: $.kubernetes.container_name
+      app: $.kubernetes.labels.app
+      app_kubernetes_io_name: $.kubernetes.labels.app_kubernetes_io_name
     buffer:
       type: file
       path: /buffers/loki
