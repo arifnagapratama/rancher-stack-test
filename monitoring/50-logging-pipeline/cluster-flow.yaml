@@ -6,7 +6,7 @@ metadata:
 spec:
   filters:
     - parser:
-        key_name: message
+        key_name: log
         reserve_data: true
         remove_key_name_field: false
         emit_invalid_record_to_error: false
@@ -14,13 +14,19 @@ spec:
           type: multi_format
           patterns:
             - format: json
+              time_type: string
+              time_format: "%iso8601"
             - format: regexp
               expression: '/^(?<klog_severity>[IWEF])[0-9]{4}[[:space:]]+[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]+[[:space:]]+[0-9]+[[:space:]]+[^[:space:]]+\][[:space:]]+(?<klog_message>.*)$/'
+            - format: regexp
+              expression: '/^\[(?<jupyter_severity>[DIWEF]) (?<jupyter_timestamp>[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]+) (?<jupyter_component>[^\]]+)\] (?<jupyter_message>.*)$/'
+            - format: regexp
+              expression: '/^\S+ \S+ \S+ \[[^\]]+\]\s+(?<http_status>[1-5][0-9]{2})\s+"(?<http_request>[^"]+)"/'
             - format: none
     - record_transformer:
         enable_ruby: true
         records:
-          - level: '${(record["klog_severity"] || record["severity"] || record["level"]).to_s.downcase.sub(/^e$/, "error").sub(/^i$/, "info").sub(/^w$/, "warning").sub(/^f$/, "critical")}'
+          - level: '${(record["klog_severity"] || record["jupyter_severity"] || (record["severity"].to_s.empty? ? nil : record["severity"]) || (record["level"].to_s.empty? ? nil : record["level"]) || (record["http_status"] && (record["http_status"].to_s.start_with?("5") ? "error" : record["http_status"].to_s.start_with?("4") ? "warning" : "info"))).to_s.downcase.sub(/^e$/, "error").sub(/^i$/, "info").sub(/^w$/, "warning").sub(/^f$/, "critical").sub(/^d$/, "debug")}'
   match:
     - select: {}
   globalOutputRefs:

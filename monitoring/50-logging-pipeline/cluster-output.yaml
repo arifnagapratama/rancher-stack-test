@@ -8,7 +8,6 @@ spec:
     url: http://loki-gateway.cattle-logging-system.svc.cluster.local:80
     # Keep the stable namespace/pod/container labels configured by the plugin;
     # do not promote every arbitrary Pod label into Loki stream labels.
-    configure_kubernetes_labels: false
     extract_kubernetes_labels: false
     labels:
       namespace: $.kubernetes.namespace_name
@@ -19,7 +18,7 @@ spec:
     buffer:
       type: file
       path: /buffers/loki
-      chunk_limit_size: 512KB
+      chunk_limit_size: 1MB
       total_limit_size: 2GB
       flush_interval: 5s
       flush_mode: interval
